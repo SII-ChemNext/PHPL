@@ -40,7 +40,7 @@ from torch.utils.tensorboard import SummaryWriter
 criterion = nn.L1Loss()
 
 K_1 = 16846
-K_2 = 17.71 # 18
+K_2 = 17.63 # 18
 
 def r2_score(y_true, y_pred):
     """

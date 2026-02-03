@@ -127,7 +127,7 @@ def train(args, model, device, loader_list,optimizer, epoch): # para_contrastive
 
         loss_ic_50 = criterion(
         cl_pred_log_ic_50 + t1_2_pred_log_ic_50,
-        vdss_pred_log_ic_50 + torch.log(torch.tensor(17.71, device=device))
+        vdss_pred_log_ic_50 + torch.log(torch.tensor(17.63, device=device))
         )
         loss = loss_cl + loss_vdss + loss_t1_2 + args.beta * loss_ic_50
         # loss = loss_cl + loss_vdss + loss_t1_2
@@ -303,9 +303,7 @@ def main():
 
     ic_50_dataset = MoleculeDataset("dataset_new_desc/ic_50", dataset="ic_50", data_type="data_motif",motif_list=motif_list)
 
-# ###9.13新增改动，添加generator，看看能否保证一致
-#     g = torch.Generator()
-#     g.manual_seed(7)
+
     ic_50_batchsize = int(args.batch_size / args.beta) if not args.beta == 0 else 2
     cl_train_loader = DataLoader(cl_train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,follow_batch=['desc'])
     vdss_train_loader = DataLoader(vdss_train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers,follow_batch=['desc'])
