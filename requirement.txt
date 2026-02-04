@@ -1,0 +1,28 @@
+#
+# Minimal runtime requirements for this repo (PEMAL_new).
+#
+# Install with:
+#   pip install -r requirement.txt
+#
+# Notes:
+# - `torch-geometric` wheels depend on your PyTorch + CUDA/CPU build. If you hit
+#   install errors for PyG, follow the official install instructions for your
+#   exact Torch/CUDA version.
+#
+
+# Core
+numpy
+pandas
+scikit-learn
+scipy
+tqdm
+matplotlib
+tensorboard
+wandb
+networkx
+rdkit
+
+# PyTorch + PyG
+torch
+torch-geometric
+torch-scatter

@@ -79,11 +79,6 @@ def train(args, model,  para_loss, para_function_cl_vdss_t1_2, para_function_auc
         vdss_y = batch.vdss_y.view(batch.vdss_y.size(0), 1)
         t1_2_y = batch.t1_2_y.view(batch.t1_2_y.size(0), 1)
         
-        auc_y = add_noise_to_partial_labels(auc_y,0.2,args.portion)
-        # cl_y = add_noise_to_partial_labels(cl_y,0.2,args.portion)
-        # vdss_y = add_noise_to_partial_labels(vdss_y,0.8,args.portion)
-        # t1_2_y = add_noise_to_partial_labels(t1_2_y,0.8,args.portion)
-        
         loss_auc = criterion(auc_pred_log, auc_y)
         loss_cl = criterion(cl_pred_log, cl_y)
         loss_vdss = criterion(vdss_pred_log, vdss_y)
@@ -95,7 +90,6 @@ def train(args, model,  para_loss, para_function_cl_vdss_t1_2, para_function_auc
         )
  
         loss = loss_auc + loss_cl + loss_vdss + loss_t1_2 +loss_k2 *args.temperature
-        # loss = loss_cl + loss_vdss + loss_t1_2 +loss_k2 *args.temperature
                 
         optimizer.zero_grad()
         loss.backward()
@@ -126,7 +120,6 @@ def eval(args, model, para_function_auc_cl,  device, loader, epoch): # para_cont
         with torch.no_grad():
             
             pred_log= model(batch.x, batch.edge_index, batch.edge_attr, batch.batch,batch.desc)
-            # pred_log= model(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
             cl_pred_log = pred_log[:,[0]]
             vdss_pred_log = pred_log[:,[1]]
             t1_2_pred_log = pred_log[:,[2]]
@@ -254,7 +247,6 @@ def main():
     
     torch.manual_seed(args.runseed)
     np.random.seed(args.runseed)
-    # args.seed = args.runseed 
     args.experiment_name = 'lr'+'_'+str(args.lr)+'_'+'decay'+'_'+str(args.decay)+'_'+'bz'+'_'+str(args.batch_size)+'_'+'drop'+'_'+str(args.dropout_ratio)+'_'+'temp'+'_'+str(args.temperature)+'_'+'port'+'_'+str(args.portion)
     save_dir = os.path.join(args.save, args.experiment_name)
     os.makedirs(save_dir, exist_ok=True)
@@ -272,27 +264,13 @@ def main():
     else:
         raise ValueError("Invalid dataset name.")
 
-    ## set up pk dataset 
-    # train_dataset = MoleculeDataset("dataset_new_desc/"+train_dataset_name, dataset=train_dataset_name, motif_list=motif_list)
-    # valid_dataset = MoleculeDataset("dataset_new_desc/"+valid_dataset_name, dataset=valid_dataset_name, motif_list=motif_list)
-    # len_train = len(train_dataset)
-    # sample_size = int(args.portion*len_train)
-    # all_indices = list(range(len_train))
-    # sampled_indices = np.random.choice(all_indices, size=sample_size, replace=False)
-    # subset_dataset = Subset(train_dataset, sampled_indices)
-
-    # print(f"创建的 Subset 数据集大小: {len(subset_dataset)}")
-    # train_loader = DataLoader(subset_dataset, batch_size=args.batch_size, shuffle=True, num_workers = args.num_workers)   
-    # val_loader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=False, num_workers = args.num_workers)
     full_train_dataset = MoleculeDataset("dataset_new_desc/" + train_dataset_name, dataset=train_dataset_name, motif_list=motif_list)
     test_dataset = MoleculeDataset("dataset_new_desc/" + test_dataset_name, dataset=test_dataset_name, motif_list=motif_list)
 
     # Split the original training data into a new training set and a validation set (7:1 ratio)
     num_full_train = len(full_train_dataset)
-    sample_size = int(num_full_train)   #数据量实验在这里乘上portion
+    sample_size = int(num_full_train)   
     all_indices = list(range(num_full_train))
-    # shuffled_indices = np.random.permutation(all_indices)
-    # sampled_indices = np.random.choice(all_indices, num_full_train, replace=False)
     shuffled_indices = np.random.permutation(all_indices)
     sampled_indices = shuffled_indices[:sample_size]
     subset_dataset = Subset(full_train_dataset, sampled_indices)
@@ -300,10 +278,9 @@ def main():
     train_size = sample_size - val_size
     
     generator = torch.Generator().manual_seed(args.seed)
-    train_dataset, val_dataset = random_split(subset_dataset, [train_size, val_size], generator=generator)  #如果不用portion就改回full_train_dataset
+    train_dataset, val_dataset = random_split(subset_dataset, [train_size, val_size], generator=generator)  
     
     print(f"Full original training size: {num_full_train}")
-    # print(f"New training split size: {len(subset_dataset)}")
     print(f"New validation split size: {len(val_dataset)}")
     print(f"Final sampled training size (portion={args.portion}): {len(train_dataset)}")
     print(f"Final test size: {len(test_dataset)}")
@@ -315,7 +292,6 @@ def main():
     
     desc_emb = 216
     model = GNN_graphpred(args.num_layer, args.emb_dim, num_tasks, JK = args.JK, drop_ratio = args.dropout_ratio, graph_pooling = args.graph_pooling, gnn_type = args.gnn_type, classnum=args.dataset_type,desc_emb=desc_emb)
-    # model = GNN_graphpred(args.num_layer, args.emb_dim, num_tasks, JK = args.JK, drop_ratio = args.dropout_ratio, graph_pooling = args.graph_pooling, gnn_type = args.gnn_type, classnum=args.dataset_type)
     if not args.filename == "":
         print("load pretrained model from:", args.filename)
         checkpoint = torch.load(args.filename, map_location=device)
@@ -355,64 +331,7 @@ def main():
         print(para_function_cl_vdss_t1_2, para_function_auc_cl,)
         auc_val_loss, cl_val_loss, vdss_val_loss, t1_2_val_loss, val_all, r2_val_auc, r2_val_cl, r2_val_vdss, r2_val_t1_2=eval(args, model, para_function_auc_cl, device, val_loader, epoch) # para_contrastive_loss,
         test_auc, test_cl, test_vdss, test_t1_2, test_all, r2_test_auc, r2_test_cl, r2_test_vdss, r2_test_t1_2 = eval(args, model, para_function_auc_cl, device, test_loader, epoch)
-    #     writer.add_scalar('Loss/train', train_mae_loss, epoch)
-    #     writer.add_scalar('Loss/cl', cl_val_loss, epoch)
-    #     writer.add_scalar('Loss/vdss', vdss_val_loss, epoch)
-    #     writer.add_scalar('Loss/t1_2', t1_2_val_loss, epoch)
-    #     writer.add_scalar('Loss/all', all_loss, epoch)
-            
-    #     if scheduler is not None:
-    #         scheduler.step(metrics=all_loss)
-            
-    #     if best_val_mse_loss > all_loss:
-    #         best_val_mse_loss = all_loss
-    #         best_epoch = epoch 
-    #         best_auc_loss = auc_val_loss
-    #         best_cl_loss = cl_val_loss 
-    #         best_vdss_loss = vdss_val_loss
-    #         best_t1_2_loss = t1_2_val_loss
-    #         best_r2_cl = r2_cl
-    #         best_r2_vdss = r2_vdss
-    #         best_r2_auc = r2_auc
-    #         best_r2_t1_2 = r2_t1_2
-    #         para_k2= para_function_cl_vdss_t1_2.item()
-    #         para_k1= para_function_auc_cl.item()
-    #         torch.save({'model_state_dict':model.state_dict(),
-    #                     'k1':para_function_auc_cl,
-    #                     'k2':para_function_cl_vdss_t1_2.data}, args.save + f"{args.experiment_name}/best_model.pth")
-    #         wait = 0
-    #     else:
-    #         wait +=1
-        
-    #     if wait > 21:
-    #         break
-            
-    #     print('best epoch:', best_epoch)
-    #     print('best_val_mse_loss', best_val_mse_loss)
-    #     print('best_auc_loss:', best_auc_loss)
-    #     print('best_cl_loss:', best_cl_loss)
-    #     print('best_vdss_loss:', best_vdss_loss)
-    #     print('best_t1_2_loss:', best_t1_2_loss)
-    #     print('para_k1:',para_k1)
-    #     print('para_k2:',para_k2)        
-    #     print('at the meanwhile, the true valid mse loss', best_true_val_mse_loss)
-    #     print("train: %f val: %f " %(train_mae_loss, best_val_mse_loss))
-    #     val_mse_loss_list.append(all_loss)
-        
-    # writer.close()
-    # new_data = pd.DataFrame({'best epoch':[best_epoch], 
-    #                             'best_val_mse_loss':[best_val_mse_loss], 
-    #                             'best_auc_loss':[best_auc_loss], 
-    #                             'best_cl_loss':[best_cl_loss] , 
-    #                             'best_vdss_loss':[best_vdss_loss], 
-    #                             'best_t1_2_loss':[best_t1_2_loss],
-    #                             'para_k1:':[para_k1],
-    #                             "best_r2_auc": [best_r2_auc],
-    #                             "best_r2_cl": [best_r2_cl],
-    #                             "best_r2_vdss": [best_r2_vdss],
-    #                             "best_r2_t1_2": [best_r2_t1_2]
-    #                             }, index=[args.experiment_name])
-        
+
         writer.add_scalar('Loss/train_all', train_mae_loss, epoch)
         writer.add_scalar('Loss/val_all', val_all, epoch)
         writer.add_scalar('Loss/test_all', test_all, epoch)
@@ -431,18 +350,18 @@ def main():
             # Save the test metrics from this best epoch
             final_test_results = {
                 'best_epoch': best_epoch,
-                # 'best_val_loss_all': best_val_loss,
-                # 'test_loss_all': test_all,
+                'best_val_loss_all': best_val_loss,
+                'test_loss_all': test_all,
                 'test_loss_auc': test_auc,
-                # 'test_loss_cl': test_cl,
-                # 'test_loss_vdss': test_vdss,
-                # 'test_loss_t1_2': test_t1_2,
-                # 'test_r2_auc': r2_test_auc,
-                # 'test_r2_cl': r2_test_cl,
-                # 'test_r2_vdss': r2_test_vdss,
-                # 'test_r2_t1_2': r2_test_t1_2,
-                # 'para_k1': para_function_auc_cl.item(),
-                # 'para_k2': para_function_cl_vdss_t1_2.item(),
+                'test_loss_cl': test_cl,
+                'test_loss_vdss': test_vdss,
+                'test_loss_t1_2': test_t1_2,
+                'test_r2_auc': r2_test_auc,
+                'test_r2_cl': r2_test_cl,
+                'test_r2_vdss': r2_test_vdss,
+                'test_r2_t1_2': r2_test_t1_2,
+                'para_k1': para_function_auc_cl.item(),
+                'para_k2': para_function_cl_vdss_t1_2.item(),
             }
             
             torch.save({
